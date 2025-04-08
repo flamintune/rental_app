@@ -1,4 +1,4 @@
-package com.example.rental_recommend.screens
+package com.example.rental_recommend.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
