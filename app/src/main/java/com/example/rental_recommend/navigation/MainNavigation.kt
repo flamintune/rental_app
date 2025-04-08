@@ -19,10 +19,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.rental_recommend.ui.screens.HomeScreen
 import com.example.rental_recommend.screens.FavoritesScreen
-import com.example.rental_recommend.screens.HomeScreen
 import com.example.rental_recommend.screens.ProfileScreen
-import com.example.rental_recommend.screens.SearchScreen
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -30,7 +29,6 @@ fun MainNavigation() {
     val navController = rememberNavController()
     val items = listOf(
         BottomNavItem.Home,
-        BottomNavItem.Search,
         BottomNavItem.Favorites,
         BottomNavItem.Profile
     )
@@ -45,9 +43,6 @@ fun MainNavigation() {
         ) {
             composable(BottomNavItem.Home.route) {
                 HomeScreen()
-            }
-            composable(BottomNavItem.Search.route) {
-                SearchScreen()
             }
             composable(BottomNavItem.Favorites.route) {
                 FavoritesScreen()
