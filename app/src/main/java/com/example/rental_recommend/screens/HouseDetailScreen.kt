@@ -35,48 +35,50 @@ fun HouseDetailScreen(
     var showFullDescription by remember { mutableStateOf(false) }
     var showImageGallery by remember { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Scaffold(
-            topBar = {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    shadowElevation = 2.dp
-                ) {
-                    TopAppBar(
-                        title = { Text("") },
-                        navigationIcon = {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = "返回",
-                                    tint = Color.White
-                                )
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { onFavoriteClick(house) }) {
-                                Icon(
-                                    imageVector = if (house.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (house.isFavorite) "取消收藏" else "收藏",
-                                    tint = Color.White
-                                )
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            titleContentColor = Color.White,
-                            navigationIconContentColor = Color.White,
-                            actionIconContentColor = Color.White
-                        )
+    Scaffold(
+        topBar = {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 2.dp
+            ) {
+                TopAppBar(
+                    title = { Text("") },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.Default.ArrowBack,
+                                contentDescription = "返回",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { onFavoriteClick(house) }) {
+                            Icon(
+                                imageVector = if (house.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (house.isFavorite) "取消收藏" else "收藏",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White
                     )
-                }
+                )
             }
-        ) { paddingValues ->
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+                modifier = Modifier.fillMaxSize()
             ) {
                 // 图片区域
                 item {
@@ -329,40 +331,41 @@ fun HouseDetailScreen(
                     }
                 }
 
-                // 联系按钮区域
+                // 底部联系按钮
                 item {
-                    Column(
+                    Surface(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surface,
+                        shadowElevation = 8.dp
                     ) {
-                        Button(
-                            onClick = onContactClick,
+                        Row(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            shape = MaterialTheme.shapes.medium
+                                .padding(16.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "联系房东",
-                                style = MaterialTheme.typography.titleMedium
-                            )
+                            Column {
+                                Text(
+                                    text = "联系房东",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "在线咨询",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Button(
+                                onClick = onContactClick,
+                                modifier = Modifier.padding(start = 16.dp)
+                            ) {
+                                Text("立即咨询")
+                            }
                         }
                     }
-                }
-
-                // 底部空间
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.rental_recommend.data.MockData
 import com.example.rental_recommend.model.RentalHouse
@@ -19,43 +20,58 @@ fun MainNavigation() {
     val navController = rememberNavController()
     var currentRoute by remember { mutableStateOf("home") }
     var houses by remember { mutableStateOf(MockData.rentalHouses) }
+    
+    // 获取当前路由
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRouteName = navBackStackEntry?.destination?.route ?: "home"
+    
+    // 判断是否显示底部导航栏
+    val showBottomBar = when {
+        currentRouteName.startsWith("detail/") -> false
+        currentRouteName == "home" -> true
+        currentRouteName == "favorites" -> true
+        currentRouteName == "profile" -> true
+        else -> false
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
-                    label = { Text("首页") },
-                    selected = currentRoute == "home",
-                    onClick = {
-                        currentRoute = "home"
-                        navController.navigate("home") {
-                            popUpTo("home") { inclusive = true }
+            if (showBottomBar) {
+                NavigationBar {
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
+                        label = { Text("首页") },
+                        selected = currentRoute == "home",
+                        onClick = {
+                            currentRoute = "home"
+                            navController.navigate("home") {
+                                popUpTo("home") { inclusive = true }
+                            }
                         }
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Favorite, contentDescription = "收藏") },
-                    label = { Text("收藏") },
-                    selected = currentRoute == "favorites",
-                    onClick = {
-                        currentRoute = "favorites"
-                        navController.navigate("favorites") {
-                            popUpTo("favorites") { inclusive = true }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Favorite, contentDescription = "收藏") },
+                        label = { Text("收藏") },
+                        selected = currentRoute == "favorites",
+                        onClick = {
+                            currentRoute = "favorites"
+                            navController.navigate("favorites") {
+                                popUpTo("favorites") { inclusive = true }
+                            }
                         }
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
-                    label = { Text("我的") },
-                    selected = currentRoute == "profile",
-                    onClick = {
-                        currentRoute = "profile"
-                        navController.navigate("profile") {
-                            popUpTo("profile") { inclusive = true }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
+                        label = { Text("我的") },
+                        selected = currentRoute == "profile",
+                        onClick = {
+                            currentRoute = "profile"
+                            navController.navigate("profile") {
+                                popUpTo("profile") { inclusive = true }
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     ) { innerPadding ->

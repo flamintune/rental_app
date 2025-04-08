@@ -1,0 +1,52 @@
+{
+  "rules": [
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/screens/**/*.kt",
+      "description": "应用的主要界面屏幕代码",
+      "importance": "high"
+    },
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/model/**/*.kt",
+      "description": "数据模型和实体类",
+      "importance": "high"
+    },
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/data/**/*.kt",
+      "description": "数据层代码，包括仓库和API调用",
+      "importance": "high"
+    },
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/navigation/**/*.kt",
+      "description": "导航相关的代码",
+      "importance": "medium"
+    },
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/components/**/*.kt",
+      "description": "可重用的UI组件",
+      "importance": "medium"
+    },
+    {
+      "pattern": "app/src/main/java/com/example/rental_recommend/utils/**/*.kt",
+      "description": "工具类和辅助函数",
+      "importance": "low"
+    },
+    {
+      "pattern": "app/src/main/AndroidManifest.xml",
+      "description": "Android应用配置文件",
+      "importance": "high"
+    },
+    {
+      "pattern": "app/build.gradle.kts",
+      "description": "应用级别的构建配置",
+      "importance": "high"
+    }
+  ],
+  "ignore": [
+    "**/build/**",
+    "**/.gradle/**",
+    "**/local.properties",
+    "**/.idea/**",
+    "**/test/**",
+    "**/androidTest/**"
+  ]
+} 
