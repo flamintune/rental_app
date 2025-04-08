@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,20 +21,53 @@ import com.example.rental_recommend.model.RentalHouse
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesScreen() {
-    var houses by remember { mutableStateOf(MockData.rentalHouses.filter { it.isFavorite }) }
+fun FavoritesScreen(
+    onNavigateToDetail: (RentalHouse) -> Unit,
+    houses: List<RentalHouse>,
+    onHousesChange: (List<RentalHouse>) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredHouses = remember(searchQuery) {
+        if (searchQuery.isBlank()) {
+            houses.filter { it.isFavorite }
+        } else {
+            houses.filter { 
+                it.isFavorite && (
+                    it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.location.contains(searchQuery, ignoreCase = true)
+                )
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("我的收藏") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+            Column {
+                TopAppBar(
+                    title = { Text("我的收藏") },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
                 )
-            )
+                SearchBar(
+                    query = searchQuery,
+                    onQueryChange = { searchQuery = it },
+                    onSearch = { /* 本地搜索，无需实现 */ },
+                    active = false,
+                    onActiveChange = { },
+                    placeholder = { Text("搜索收藏的房源") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // 搜索建议列表
+                }
+            }
         }
     ) { paddingValues ->
-        if (houses.isEmpty()) {
+        if (filteredHouses.isEmpty()) {
             // 空状态展示
             Box(
                 modifier = Modifier
@@ -53,14 +87,17 @@ fun FavoritesScreen() {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "暂无收藏房源",
+                        text = if (searchQuery.isBlank()) "暂无收藏房源" else "未找到相关房源",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "收藏喜欢的房源，方便后续查看",
+                        text = if (searchQuery.isBlank()) 
+                            "收藏喜欢的房源，方便后续查看" 
+                        else 
+                            "试试其他关键词",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -75,12 +112,15 @@ fun FavoritesScreen() {
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(houses) { house ->
+                items(filteredHouses) { house ->
                     FavoriteHouseItem(
                         house = house,
                         onFavoriteClick = { updatedHouse ->
-                            houses = houses.filter { it.id != updatedHouse.id }
-                        }
+                            onHousesChange(houses.map { 
+                                if (it.id == updatedHouse.id) updatedHouse else it 
+                            })
+                        },
+                        onNavigateToDetail = onNavigateToDetail
                     )
                 }
             }
@@ -92,13 +132,14 @@ fun FavoritesScreen() {
 @Composable
 fun FavoriteHouseItem(
     house: RentalHouse,
-    onFavoriteClick: (RentalHouse) -> Unit
+    onFavoriteClick: (RentalHouse) -> Unit,
+    onNavigateToDetail: (RentalHouse) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        onClick = { /* TODO: 导航到详情页 */ },
+        onClick = { onNavigateToDetail(house) },
         elevation = CardDefaults.cardElevation(
             defaultElevation = 1.dp
         ),

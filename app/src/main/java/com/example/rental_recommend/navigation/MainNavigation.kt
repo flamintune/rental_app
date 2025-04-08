@@ -1,83 +1,114 @@
 package com.example.rental_recommend.navigation
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.rental_recommend.ui.screens.HomeScreen
-import com.example.rental_recommend.screens.FavoritesScreen
-import com.example.rental_recommend.screens.ProfileScreen
+import com.example.rental_recommend.data.MockData
+import com.example.rental_recommend.model.RentalHouse
+import com.example.rental_recommend.screens.*
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainNavigation() {
     val navController = rememberNavController()
-    val items = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Favorites,
-        BottomNavItem.Profile
-    )
+    var currentRoute by remember { mutableStateOf("home") }
+    var houses by remember { mutableStateOf(MockData.rentalHouses) }
 
     Scaffold(
-        bottomBar = { BottomNavBar(navController = navController, items = items) }
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "首页") },
+                    label = { Text("首页") },
+                    selected = currentRoute == "home",
+                    onClick = {
+                        currentRoute = "home"
+                        navController.navigate("home") {
+                            popUpTo("home") { inclusive = true }
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Favorite, contentDescription = "收藏") },
+                    label = { Text("收藏") },
+                    selected = currentRoute == "favorites",
+                    onClick = {
+                        currentRoute = "favorites"
+                        navController.navigate("favorites") {
+                            popUpTo("favorites") { inclusive = true }
+                        }
+                    }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "我的") },
+                    label = { Text("我的") },
+                    selected = currentRoute == "profile",
+                    onClick = {
+                        currentRoute = "profile"
+                        navController.navigate("profile") {
+                            popUpTo("profile") { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = BottomNavItem.Home.route,
+            startDestination = "home",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(BottomNavItem.Home.route) {
-                HomeScreen()
+            composable("home") {
+                HomeScreen(
+                    onNavigateToFavorites = {
+                        currentRoute = "favorites"
+                        navController.navigate("favorites")
+                    },
+                    onNavigateToProfile = {
+                        currentRoute = "profile"
+                        navController.navigate("profile")
+                    },
+                    onNavigateToDetail = { house: RentalHouse ->
+                        navController.navigate("detail/${house.id}")
+                    },
+                    houses = houses,
+                    onHousesChange = { houses = it }
+                )
             }
-            composable(BottomNavItem.Favorites.route) {
-                FavoritesScreen()
+            composable("favorites") {
+                FavoritesScreen(
+                    onNavigateToDetail = { house: RentalHouse ->
+                        navController.navigate("detail/${house.id}")
+                    },
+                    houses = houses,
+                    onHousesChange = { houses = it }
+                )
             }
-            composable(BottomNavItem.Profile.route) {
+            composable("profile") {
                 ProfileScreen()
             }
-        }
-    }
-}
-
-@Composable
-fun BottomNavBar(navController: NavController, items: List<BottomNavItem>) {
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    NavigationBar {
-        items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.title) },
-                label = { Text(text = item.title) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        // 防止创建多个返回栈
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        // 避免多次点击同一个导航项创建多个实例
-                        launchSingleTop = true
-                        // 状态恢复
-                        restoreState = true
-                    }
+            composable("detail/{houseId}") { backStackEntry ->
+                val houseId = backStackEntry.arguments?.getString("houseId")?.toIntOrNull() ?: 0
+                val house = houses.find { it.id == houseId }
+                if (house != null) {
+                    HouseDetailScreen(
+                        house = house,
+                        onBackClick = { navController.popBackStack() },
+                        onFavoriteClick = { updatedHouse ->
+                            houses = houses.map { 
+                                if (it.id == updatedHouse.id) updatedHouse else it 
+                            }
+                        },
+                        onContactClick = { /* TODO: 实现联系房东功能 */ }
+                    )
                 }
-            )
+            }
         }
     }
 } 

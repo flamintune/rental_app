@@ -30,8 +30,13 @@ enum class HomeTab {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
-    var houses by remember { mutableStateOf(MockData.rentalHouses) }
+fun HomeScreen(
+    onNavigateToFavorites: () -> Unit,
+    onNavigateToProfile: () -> Unit,
+    onNavigateToDetail: (RentalHouse) -> Unit,
+    houses: List<RentalHouse>,
+    onHousesChange: (List<RentalHouse>) -> Unit
+) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(HomeTab.PERSONALIZED) }
 
@@ -61,7 +66,7 @@ fun HomeScreen() {
                     onSearch = { /* TODO: 实现搜索功能 */ },
                     active = false,
                     onActiveChange = { },
-                    placeholder = { Text("搜索房源") },
+                    placeholder = { Text("搜索房源标题、位置、价格") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = "搜索") },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,10 +143,11 @@ fun HomeScreen() {
                     RentalHouseCard(
                         house = house,
                         onFavoriteClick = { updatedHouse ->
-                            houses = houses.map { 
+                            onHousesChange(houses.map { 
                                 if (it.id == updatedHouse.id) updatedHouse else it 
-                            }
-                        }
+                            })
+                        },
+                        onNavigateToDetail = onNavigateToDetail
                     )
                 }
             }
@@ -153,15 +159,16 @@ fun HomeScreen() {
 @Composable
 fun RentalHouseCard(
     house: RentalHouse,
-    onFavoriteClick: (RentalHouse) -> Unit
+    onFavoriteClick: (RentalHouse) -> Unit,
+    onNavigateToDetail: (RentalHouse) -> Unit
 ) {
     Card(
+        onClick = { onNavigateToDetail(house) },
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        onClick = { /* TODO: 导航到详情页 */ },
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
+            defaultElevation = 1.dp
         ),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

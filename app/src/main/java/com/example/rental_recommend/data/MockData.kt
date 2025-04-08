@@ -5,7 +5,7 @@ import com.example.rental_recommend.model.RentalHouse
 object MockData {
     val rentalHouses = listOf(
         RentalHouse(
-            id = "1",
+            id = 1,
             title = "阳光花园精装两房",
             price = 3500,
             location = "海淀区",
@@ -17,7 +17,7 @@ object MockData {
             isFavorite = false
         ),
         RentalHouse(
-            id = "2",
+            id = 2,
             title = "望京SOHO附近三房",
             price = 6800,
             location = "朝阳区",
@@ -29,7 +29,7 @@ object MockData {
             isFavorite = true
         ),
         RentalHouse(
-            id = "3",
+            id = 3,
             title = "西二旗地铁站旁一房",
             price = 2800,
             location = "海淀区",
