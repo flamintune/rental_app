@@ -18,15 +18,16 @@ import com.example.rental_recommend.screens.*
 @Composable
 fun MainNavigation() {
     val navController = rememberNavController()
-    var currentRoute by remember { mutableStateOf("home") }
+    var currentRoute by remember { mutableStateOf("auth") }
     var houses by remember { mutableStateOf(MockData.rentalHouses) }
     
     // 获取当前路由
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRouteName = navBackStackEntry?.destination?.route ?: "home"
+    val currentRouteName = navBackStackEntry?.destination?.route ?: "auth"
     
     // 判断是否显示底部导航栏
     val showBottomBar = when {
+        currentRouteName == "auth" -> false
         currentRouteName.startsWith("detail/") -> false
         currentRouteName == "home" -> true
         currentRouteName == "favorites" -> true
@@ -77,9 +78,26 @@ fun MainNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "home",
+            startDestination = "auth",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("auth") {
+                AuthScreen(
+                    onLoginSuccess = {
+                        currentRoute = "home"
+                        navController.navigate("home") {
+                            popUpTo("auth") { inclusive = true }
+                        }
+                    },
+                    onNavigateToHome = {
+                        currentRoute = "home"
+                        navController.navigate("home") {
+                            popUpTo("auth") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
             composable("home") {
                 HomeScreen(
                     onNavigateToFavorites = {
