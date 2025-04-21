@@ -1,4 +1,5 @@
 package com.example.rental_recommend.viewmodel
+import android.util.Log
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -47,6 +48,7 @@ class RentalViewModel(
             _rentalListState.value = RentalListState.Loading
             repository.getRentalList(currentPage, pageSize)
                 .onSuccess { rentals ->
+                    Log.d("RentalViewModel", "loadRentalList: ${rentals}")
                     _rentalListState.value = RentalListState.Success(rentals)
                 }
                 .onFailure { error ->

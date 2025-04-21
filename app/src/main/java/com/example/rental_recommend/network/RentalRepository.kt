@@ -103,7 +103,7 @@ class RentalRepository(private val apiService: ApiService) {
             province = province,
             city = city,
             imgs = imgs,
-            detail = detail
+        detail = detail
         )
     }
 } 
