@@ -21,12 +21,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.rental_recommend.R
 import com.example.rental_recommend.model.RentalHouse
 import com.example.rental_recommend.viewmodel.RentalListState
 import com.example.rental_recommend.viewmodel.RentalViewModel
@@ -66,34 +69,6 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadRentalList()
-    }
-
-    LaunchedEffect(rentalListState) {
-        when (val state = rentalListState) {
-            is RentalListState.Success -> {
-                Log.d("HomeScreen", "获取到房源数据：${state.rentals.size} 条")
-                state.rentals.forEachIndexed { index, rental ->
-                    Log.d("HomeScreen", """
-                        房源 ${index + 1}:
-                        - ID: ${rental.id}
-                        - 标题: ${rental.title}
-                        - 价格: ${rental.priceText}
-                        - 位置: ${rental.location}
-                        - 面积: ${rental.areaText}
-                        - 类型: ${rental.type}
-                        - 结构: ${rental.structure}
-                        - 标签: ${rental.tags}
-                        ----------------------------------------
-                    """.trimIndent())
-                }
-            }
-            is RentalListState.Error -> {
-                Log.e("HomeScreen", "加载房源数据失败: ${state.message}")
-            }
-            is RentalListState.Loading -> {
-                Log.d("HomeScreen", "正在加载房源数据...")
-            }
-        }
     }
 
     var searchQuery by remember { mutableStateOf("") }
@@ -203,7 +178,7 @@ fun HomeScreen(
                             items(filteredHouses) { rental ->
                                 RentalItem(
                                     rental = rental,
-                                    onClick = { onNavigateToDetail(rental.id) },
+                                    onItemClick = { onNavigateToDetail(it.id) },
                                     onFavoriteClick = { /* 首页不需要收藏功能 */ },
                                     isFavorite = false
                                 )
@@ -219,28 +194,54 @@ fun HomeScreen(
 @Composable
 fun RentalItem(
     rental: RentalHouse,
-    onClick: () -> Unit,
+    onItemClick: (RentalHouse) -> Unit,
     onFavoriteClick: () -> Unit,
     isFavorite: Boolean
 ) {
+    val context = LocalContext.current
+    var retryCount by remember { mutableStateOf(0) }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .padding(8.dp)
+            .clickable { onItemClick(rental) },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Box {
+        Column {
+            // 图片
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            ) {
                 AsyncImage(
-                    model = rental.cover ?: "",
-                    contentDescription = rental.title ?: "房源图片",
+                    model = ImageRequest.Builder(context)
+                        .data(rental.cover)
+                        .crossfade(true)
+                        .size(width = 500, height = 300)
+                        .build(),
+                    contentDescription = rental.title,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentScale = ContentScale.Crop
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium),
+                    contentScale = ContentScale.Crop,
+                    onLoading = {
+                        Log.d("RentalItem", "开始加载图片: ${rental.cover}, 重试次数: $retryCount")
+                    },
+                    onSuccess = { state ->
+                        Log.d("RentalItem", "图片加载成功: ${rental.cover}")
+                    },
+                    onError = { result ->
+                        Log.e("RentalItem", "图片加载失败: ${rental.cover}, 错误: ${result.result.throwable?.message ?: "未知错误"}")
+                        if (retryCount < 3) {
+                            retryCount++
+                            Log.d("RentalItem", "尝试重新加载图片: ${rental.cover}, 重试次数: $retryCount")
+                        }
+                    }
                 )
+                
+                // 收藏按钮
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
@@ -254,45 +255,42 @@ fun RentalItem(
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = rental.title ?: "暂无标题",
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = rental.priceText ?: "价格待定",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = rental.location ?: "位置待定",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+            
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = "${rental.areaText ?: "面积待定"} | ${rental.structure ?: "户型待定"}",
-                    style = MaterialTheme.typography.bodySmall
+                    text = rental.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = rental.type ?: "类型待定",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            if (!rental.tags.isNullOrBlank()) {
+                
                 Spacer(modifier = Modifier.height(8.dp))
+                
                 Text(
-                    text = rental.tags,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    text = rental.priceText,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary
                 )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "${rental.location} · ${rental.areaText} · ${rental.structure}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                if (!rental.tags.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = rental.tags,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
             }
         }
     }
