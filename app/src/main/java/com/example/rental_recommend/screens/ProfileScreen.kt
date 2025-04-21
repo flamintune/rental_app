@@ -33,8 +33,10 @@ import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,148 +63,211 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.rental_recommend.model.User
+import com.example.rental_recommend.viewmodel.ProfileState
+import com.example.rental_recommend.viewmodel.ProfileViewModel
+import androidx.compose.runtime.collectAsState
 import kotlin.math.max
 import kotlin.math.min
 
 @Composable
 fun ProfileScreen(
-    onNavigateToFavorite: () -> Unit = {}
+    onNavigateToFavorite: () -> Unit = {},
+    onLogout: () -> Unit = {},
+    viewModel: ProfileViewModel = viewModel()
 ) {
-    // 用户数据状态
-    var user by remember {
-        mutableStateOf(
-            User(
-                id = 1,
-                username = "user123",
-                nickname = "张三",
-                email = "zhangsan@example.com",
-                phone = "13812345678",
-                avatar = null,
-                gender = "男",
-                isVerified = false,
-                budgetMin = 1500.0,
-                budgetMax = 3000.0,
-                preferredAreas = listOf("海淀区", "朝阳区"),
-                houseType = "两室一厅",
-                isLandlord = false,
-                isTenant = true
-            )
-        )
+    val context = LocalContext.current
+    val profileState by viewModel.profileState.collectAsState()
+    
+    // 加载用户数据
+    LaunchedEffect(Unit) {
+        viewModel.loadUserProfile(context)
     }
     
-    // 对话框状态
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var showRentalPreferenceDialog by remember { mutableStateOf(false) }
-    
-    // 编辑个人资料对话框
-    if (showEditProfileDialog) {
-        EditProfileDialog(
-            user = user,
-            onDismiss = { showEditProfileDialog = false },
-            onSave = { updatedUser -> 
-                user = updatedUser
-                showEditProfileDialog = false
+    when (val state = profileState) {
+        is ProfileState.Loading -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-        )
-    }
-    
-    // 编辑租房偏好对话框
-    if (showRentalPreferenceDialog) {
-        EditRentalPreferenceDialog(
-            user = user,
-            onDismiss = { showRentalPreferenceDialog = false },
-            onSave = { updatedUser -> 
-                user = updatedUser
-                showRentalPreferenceDialog = false
+        }
+        is ProfileState.Error -> {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
-        )
-    }
+        }
+        is ProfileState.Success -> {
+            // 对话框状态
+            var showEditProfileDialog by remember { mutableStateOf(false) }
+            var showRentalPreferenceDialog by remember { mutableStateOf(false) }
+            var showLogoutDialog by remember { mutableStateOf(false) }
+            
+            // 编辑个人资料对话框
+            if (showEditProfileDialog) {
+                EditProfileDialog(
+                    user = state.user,
+                    onDismiss = { showEditProfileDialog = false },
+                    onSave = { updatedUser -> 
+                        viewModel.updateUserProfile(
+                            context = context,
+                            nickname = updatedUser.nickname,
+                            email = updatedUser.email,
+                            phone = updatedUser.phone,
+                            gender = updatedUser.gender
+                        )
+                        showEditProfileDialog = false
+                    }
+                )
+            }
+            
+            // 编辑租房偏好对话框
+            if (showRentalPreferenceDialog) {
+                EditRentalPreferenceDialog(
+                    user = state.user,
+                    onDismiss = { showRentalPreferenceDialog = false },
+                    onSave = { updatedUser -> 
+                        viewModel.updateUserProfile(
+                            context = context,
+                            budgetMin = updatedUser.budgetMin,
+                            budgetMax = updatedUser.budgetMax,
+                            preferredAreas = updatedUser.preferredAreas,
+                            houseType = updatedUser.houseType
+                        )
+                        showRentalPreferenceDialog = false
+                    }
+                )
+            }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                // 用户信息头部
-                UserProfileHeader(user)
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // 个人信息
-                SettingsCategory(title = "个人信息") {
-                    SettingsItem(
-                        icon = Icons.Default.AccountCircle, 
-                        title = "基本资料", 
-                        subtitle = "${user.nickname ?: user.username} · ${user.gender} · ${user.email}",
-                        onClick = { showEditProfileDialog = true }
-                    )
-                    SettingsItem(
-                        icon = Icons.Default.Call, 
-                        title = "联系电话", 
-                        subtitle = user.phone ?: "未设置",
-                        onClick = { showEditProfileDialog = true }
-                    )
+            // 退出登录确认对话框
+            if (showLogoutDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLogoutDialog = false },
+                    title = { Text("确认退出") },
+                    text = { Text("确定要退出登录吗？") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showLogoutDialog = false
+                                onLogout()
+                            }
+                        ) {
+                            Text("确定")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showLogoutDialog = false }) {
+                            Text("取消")
+                        }
+                    }
+                )
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    item {
+                        // 用户信息头部
+                        UserProfileHeader(state.user)
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 个人信息
+                        SettingsCategory(title = "个人信息") {
+                            SettingsItem(
+                                icon = Icons.Default.AccountCircle, 
+                                title = "基本资料", 
+                                subtitle = "${state.user.nickname ?: state.user.username} · ${state.user.gender} · ${state.user.email}",
+                                onClick = { showEditProfileDialog = true }
+                            )
+                            SettingsItem(
+                                icon = Icons.Default.Call, 
+                                title = "联系电话", 
+                                subtitle = state.user.phone ?: "未设置",
+                                onClick = { showEditProfileDialog = true }
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 租房偏好
+                        SettingsCategory(title = "租房偏好") {
+                            SettingsItem(
+                                icon = Icons.Default.Home, 
+                                title = "房源类型", 
+                                subtitle = state.user.houseType ?: "未设置",
+                                onClick = { showRentalPreferenceDialog = true }
+                            )
+                            SettingsItem(
+                                icon = Icons.Outlined.Payments, 
+                                title = "预算范围", 
+                                subtitle = if (state.user.budgetMin != null && state.user.budgetMax != null) 
+                                    "¥${state.user.budgetMin?.toInt() ?: 0}-${state.user.budgetMax?.toInt() ?: 0}/月"
+                                else 
+                                    "未设置",
+                                onClick = { showRentalPreferenceDialog = true }
+                            )
+                            SettingsItem(
+                                icon = Icons.Default.Favorite, 
+                                title = "意向区域", 
+                                subtitle = if (state.user.preferredAreas.isNotEmpty()) 
+                                    state.user.preferredAreas.joinToString(", ")
+                                else 
+                                    "未设置",
+                                onClick = { showRentalPreferenceDialog = true }
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // 退出登录按钮
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            Button(
+                                onClick = { showLogoutDialog = true },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(50.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "退出登录",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("退出登录", fontSize = 16.sp)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(32.dp))
+                    }
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // 租房偏好
-                SettingsCategory(title = "租房偏好") {
-                    SettingsItem(
-                        icon = Icons.Default.Home, 
-                        title = "房源类型", 
-                        subtitle = user.houseType ?: "未设置",
-                        onClick = { showRentalPreferenceDialog = true }
-                    )
-                    SettingsItem(
-                        icon = Icons.Outlined.Payments, 
-                        title = "预算范围", 
-                        subtitle = if (user.budgetMin != null && user.budgetMax != null) 
-                            "¥${user.budgetMin?.toInt() ?: 0}-${user.budgetMax?.toInt() ?: 0}/月"
-                        else 
-                            "未设置",
-                        onClick = { showRentalPreferenceDialog = true }
-                    )
-                    SettingsItem(
-                        icon = Icons.Default.Favorite, 
-                        title = "意向区域", 
-                        subtitle = if (user.preferredAreas.isNotEmpty()) 
-                            user.preferredAreas.joinToString(", ")
-                        else 
-                            "未设置",
-                        onClick = { showRentalPreferenceDialog = true }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // 其他功能
-//                SettingsCategory(title = "我的收藏") {
-//                    SettingsItem(
-//                        icon = Icons.Outlined.History,
-//                        title = "浏览历史",
-//                        subtitle = "查看您最近浏览的房源",
-//                        onClick = { /* 导航到浏览历史页面 */ }
-//                    )
-//                    SettingsItem(
-//                        icon = Icons.Default.Favorite,
-//                        title = "收藏房源",
-//                        subtitle = "查看您收藏的房源",
-//                        onClick = onNavigateToFavorite
-//                    )
-//                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
@@ -462,7 +528,7 @@ fun EditRentalPreferenceDialog(
     val budgetMax = budgetMaxStr.toIntOrNull() ?: 5000
     
     val houseTypeOptions = listOf("一室一厅", "两室一厅", "三室一厅", "三室两厅", "四室及以上", "单间")
-    val areaOptions = listOf("海淀区", "朝阳区", "丰台区", "东城区", "西城区", "石景山区", "大兴区", "通州区", "昌平区", "顺义区")
+    val areaOptions = listOf("锦江区", "青羊区", "金牛区", "武侯区", "成华区", "龙泉驿区", "青白江区", "新都区", "温江区", "双流区", "郫都区", "新津区")
     
     // 选中的区域列表 - 使用独立的可变状态列表
     var preferredAreas by remember { mutableStateOf(user.preferredAreas.toList()) }
