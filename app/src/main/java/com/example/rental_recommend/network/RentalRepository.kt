@@ -1,5 +1,6 @@
 package com.example.rental_recommend.network
 
+import android.util.Log
 import com.example.rental_recommend.model.RentalHouse
 import retrofit2.Response
 
@@ -9,7 +10,12 @@ class RentalRepository(private val apiService: ApiService) {
         return try {
             val response = apiService.getRentalList(page, pageSize)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.result)
+                val body = response.body()!!
+                if (body.code == 200) {
+                    Result.success(body.data.result)
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
                 Result.failure(Exception("获取房源列表失败"))
             }
@@ -22,7 +28,12 @@ class RentalRepository(private val apiService: ApiService) {
         return try {
             val response = apiService.getRentalDetail(token, id)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.toRentalHouse())
+                val body = response.body()!!
+                if (body.code == 200) {
+                    Result.success(body.data.toRentalHouse())
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
                 Result.failure(Exception("获取房源详情失败"))
             }
@@ -35,7 +46,14 @@ class RentalRepository(private val apiService: ApiService) {
         return try {
             val response = apiService.getRecommendations(token)
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.map { it.toRentalHouse() })
+                val body = response.body()!!
+                if (body.code == 200) {
+                    body.data?.let { data ->
+                        Result.success(data.map { it.toRentalHouse() })
+                    } ?: Result.success(emptyList())
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
                 Result.failure(Exception("获取推荐房源失败"))
             }
@@ -46,11 +64,21 @@ class RentalRepository(private val apiService: ApiService) {
 
     suspend fun toggleFavorite(token: String, rentalId: Int): Result<Boolean> {
         return try {
-            val response = apiService.toggleFavorite(token, FavoriteRequest(rentalId))
+            val response = apiService.toggleFavorite(
+                token = token,
+                request = mapOf("id" to rentalId)
+            )
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.data?.isFavorite ?: false)
+                val body = response.body()!!
+                if (body.code == 200) {
+                    body.data?.get("isFavorite")?.let {
+                        Result.success(it)
+                    } ?: Result.failure(Exception("操作失败：返回数据格式错误"))
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
-                Result.failure(Exception("操作失败"))
+                Result.failure(Exception(response.message()))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -59,9 +87,18 @@ class RentalRepository(private val apiService: ApiService) {
 
     suspend fun getFavorites(token: String, page: Int = 1, pageSize: Int = 10): Result<List<RentalHouse>> {
         return try {
-            val response = apiService.getFavorites(token, page, pageSize)
+            val response = apiService.getFavorites(
+                token = token,
+                page = page,
+                pageSize = pageSize
+            )
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.result)
+                val body = response.body()!!
+                if (body.code == 200) {
+                    Result.success(body.data.result)
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
                 Result.failure(Exception("获取收藏列表失败"))
             }
@@ -72,11 +109,21 @@ class RentalRepository(private val apiService: ApiService) {
 
     suspend fun checkFavorite(token: String, rentalId: Int): Result<Boolean> {
         return try {
-            val response = apiService.checkFavorite(token, rentalId)
+            val response = apiService.checkFavorite(
+                token = token,
+                id = rentalId
+            )
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!.data?.isFavorite ?: false)
+                val body = response.body()!!
+                if (body.code == 200) {
+                    body.data?.get("isFavorite")?.let {
+                        Result.success(it)
+                    } ?: Result.failure(Exception("检查收藏状态失败：返回数据格式错误"))
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
-                Result.failure(Exception("检查收藏状态失败"))
+                Result.failure(Exception(response.message()))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -99,17 +146,22 @@ class RentalRepository(private val apiService: ApiService) {
                 query, minPrice, maxPrice, minArea, maxArea,
                 type, orientation, province, city
             )
-            if (response.isSuccessful && response.body() != null && response.body()!!.code == 200) {
-                Result.success(response.body()!!.data)
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                if (body.code == 200) {
+                    Result.success(body.data)
+                } else {
+                    Result.failure(Exception(body.message))
+                }
             } else {
-                Result.failure(Exception(response.body()?.message ?: "搜索房源失败"))
+                Result.failure(Exception(response.message()))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    private fun RentalDetailResponse.toRentalHouse(): RentalHouse {
+    private fun RentalDetailData.toRentalHouse(): RentalHouse {
         return RentalHouse(
             id = id,
             cover = cover,

@@ -159,7 +159,7 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
@@ -227,7 +227,8 @@ fun HomeScreen(
                         RentalList(
                             rentals = state.rentals,
                             isSearchActive = isSearchActive,
-                            onItemClick = { onNavigateToDetail(it.id) }
+                            onItemClick = { onNavigateToDetail(it.id) },
+                            viewModel = viewModel
                         )
                     }
                 }
@@ -266,8 +267,54 @@ private fun EmptyStateMessage(isSearchActive: Boolean) {
 private fun RentalList(
     rentals: List<RentalHouse>,
     isSearchActive: Boolean,
-    onItemClick: (RentalHouse) -> Unit
+    onItemClick: (RentalHouse) -> Unit,
+    viewModel: RentalViewModel
 ) {
+    val favoriteState by viewModel.favoriteState.collectAsState()
+    val favoriteStates = remember(rentals) {
+        mutableStateMapOf<Int, Boolean>()
+    }
+    
+    // 初始化收藏状态
+    LaunchedEffect(rentals) {
+        rentals.forEach { rental ->
+            viewModel.checkFavorite(rental.id)
+        }
+    }
+    
+    // 监听收藏状态变化
+    LaunchedEffect(favoriteState) {
+        when (favoriteState) {
+            is FavoriteState.Success -> {
+                val state = favoriteState as FavoriteState.Success
+                // 找到当前操作的房源ID
+                val currentRentalId = rentals.find { rental ->
+                    viewModel.lastCheckedRentalId == rental.id
+                }?.id
+                
+                currentRentalId?.let { id ->
+                    favoriteStates[id] = state.isFavorite
+                    // 如果是切换收藏操作，立即更新UI
+                    if (viewModel.lastOperationWasToggle) {
+                        favoriteStates[id] = state.isFavorite
+                    }
+                }
+            }
+            is FavoriteState.Error -> {
+                // 处理错误状态
+                val currentRentalId = rentals.find { rental ->
+                    viewModel.lastCheckedRentalId == rental.id
+                }?.id
+                
+                currentRentalId?.let { id ->
+                    // 保持原有状态
+                    favoriteStates[id] = favoriteStates[id] ?: false
+                }
+            }
+            else -> {}
+        }
+    }
+    
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -287,8 +334,10 @@ private fun RentalList(
             RentalItem(
                 rental = rental,
                 onItemClick = { onItemClick(rental) },
-                onFavoriteClick = { /* 首页不需要收藏功能 */ },
-                isFavorite = false
+                onFavoriteClick = { 
+                    viewModel.toggleFavorite(rental.id)
+                },
+                isFavorite = favoriteStates[rental.id] ?: false
             )
         }
     }

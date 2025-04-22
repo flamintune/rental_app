@@ -1,5 +1,6 @@
 package com.example.rental_recommend.screens
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,6 +25,7 @@ import com.example.rental_recommend.viewmodel.RentalListState
 import com.example.rental_recommend.components.RentalItem
 import com.example.rental_recommend.viewmodel.RentalViewModelFactory
 import com.example.rental_recommend.viewmodel.RentalEvent
+import com.example.rental_recommend.viewmodel.FavoriteState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +37,16 @@ fun FavoritesScreen(
     )
 ) {
     val rentalListState by viewModel.rentalListState.collectAsState()
+    val favoriteState by viewModel.favoriteState.collectAsState()
     val events by viewModel.events.collectAsState()
     val context = LocalContext.current
+    
+    // 当前操作的房源ID
+    var currentRentalId by remember { mutableStateOf<Int?>(null) }
+    // 是否显示确认对话框
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    // 是否正在操作中
+    var isOperating by remember { mutableStateOf(false) }
 
     LaunchedEffect(events) {
         when (events) {
@@ -49,7 +59,28 @@ fun FavoritesScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.loadRentalList()
+        viewModel.loadFavorites()
+    }
+    
+    // 监听收藏状态变化
+    LaunchedEffect(favoriteState) {
+        when (favoriteState) {
+            is FavoriteState.Success -> {
+                isOperating = false
+                // 如果取消收藏成功，重新加载收藏列表
+                if (!(favoriteState as FavoriteState.Success).isFavorite) {
+                    viewModel.loadFavorites()
+                }
+            }
+            is FavoriteState.Error -> {
+                isOperating = false
+                // 显示错误提示
+                // TODO: 可以添加一个Snackbar来显示错误信息
+            }
+            is FavoriteState.Loading -> {
+                isOperating = true
+            }
+        }
     }
 
     Scaffold(
@@ -76,23 +107,42 @@ fun FavoritesScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(text = state.message)
+                    Text(
+                        text = state.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
             is RentalListState.Success -> {
-                if (state.rentals.isEmpty()) {
+                val rentals = state.rentals
+                Log.d("FavoritesScreen", "rentals: ${rentals}")
+                if (rentals.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "暂无收藏",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "暂无收藏",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 } else {
                     LazyColumn(
@@ -102,12 +152,13 @@ fun FavoritesScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        items(state.rentals) { rental ->
+                        items(rentals) { rental ->
                             RentalItem(
                                 rental = rental,
-                                onClick = { onNavigateToDetail(rental.id) },
+                                onItemClick = { onNavigateToDetail(rental.id) },
                                 onFavoriteClick = {
-                                    viewModel.toggleFavorite(rental.id)
+                                    currentRentalId = rental.id
+                                    showConfirmDialog = true
                                 },
                                 isFavorite = true
                             )
@@ -115,6 +166,44 @@ fun FavoritesScreen(
                     }
                 }
             }
+        }
+        
+        // 确认取消收藏对话框
+        if (showConfirmDialog && currentRentalId != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    if (!isOperating) {
+                        showConfirmDialog = false
+                        currentRentalId = null
+                    }
+                },
+                title = { Text("取消收藏") },
+                text = { Text("确定要取消收藏该房源吗？") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            currentRentalId?.let { id ->
+                                isOperating = true
+                                viewModel.toggleFavorite(id)
+                                // 关闭弹窗
+                                showConfirmDialog = false
+                            }
+                        }
+                    ) {
+                        Text("确定")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { 
+                            showConfirmDialog = false
+                            currentRentalId = null
+                        }
+                    ) {
+                        Text("取消")
+                    }
+                }
+            )
         }
     }
 }

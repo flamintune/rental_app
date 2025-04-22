@@ -43,13 +43,13 @@ interface ApiService {
     @GET("rental/recommmand/")
     suspend fun getRecommendations(
         @Header("access-token") token: String
-    ): Response<List<RentalDetailResponse>>
+    ): Response<BaseResponse<List<RentalDetailData>>>
 
     @POST("rental/favorite/toggle/")
     suspend fun toggleFavorite(
         @Header("access-token") token: String,
-        @Body request: FavoriteRequest
-    ): Response<FavoriteResponse>
+        @Body request: Map<String, Int>
+    ): Response<BaseResponse<Map<String, Boolean>>>
 
     @GET("rental/favorite/list/")
     suspend fun getFavorites(
@@ -62,7 +62,7 @@ interface ApiService {
     suspend fun checkFavorite(
         @Header("access-token") token: String,
         @Query("id") id: Int
-    ): Response<FavoriteResponse>
+    ): Response<BaseResponse<Map<String, Boolean>>>
 
     @GET("rental/search/")
     suspend fun searchRental(
@@ -139,11 +139,23 @@ data class UpdateProfileResponse(
 )
 
 data class RentalListResponse(
+    val code: Int,
+    val message: String,
+    val data: RentalListData
+)
+
+data class RentalListData(
     val total: Int,
     val result: List<RentalHouse>
 )
 
 data class RentalDetailResponse(
+    val code: Int,
+    val message: String,
+    val data: RentalDetailData
+)
+
+data class RentalDetailData(
     val id: Int,
     val cover: String,
     val type: String,
@@ -185,4 +197,10 @@ data class SearchResponse(
     val code: Int,
     val message: String,
     val data: List<RentalHouse>
+)
+
+data class BaseResponse<T>(
+    val code: Int,
+    val message: String,
+    val data: T?
 ) 

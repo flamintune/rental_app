@@ -53,12 +53,20 @@ class RentalViewModel(
     private val _detailState = MutableStateFlow<RentalDetailState>(RentalDetailState.Loading)
     val detailState: StateFlow<RentalDetailState> = _detailState.asStateFlow()
 
+    private val _favorites = MutableStateFlow<List<RentalHouse>>(emptyList())
+    val favorites: StateFlow<List<RentalHouse>> = _favorites.asStateFlow()
+
+    var lastCheckedRentalId: Int? = null
+        private set
+        
+    var lastOperationWasToggle: Boolean = false
+        private set
+
     fun loadRentalList() {
         viewModelScope.launch {
             _rentalListState.value = RentalListState.Loading
             repository.getRentalList(currentPage, pageSize)
                 .onSuccess { rentals ->
-                    Log.d("RentalViewModel", "loadRentalList: ${rentals}")
                     _rentalListState.value = RentalListState.Success(rentals)
                 }
                 .onFailure { error ->
@@ -66,6 +74,7 @@ class RentalViewModel(
                 }
         }
     }
+    
 
     fun loadMore() {
         if (_rentalListState.value !is RentalListState.Success) return
@@ -101,6 +110,8 @@ class RentalViewModel(
                 _events.value = RentalEvent.AuthError
                 return@launch
             }
+            lastCheckedRentalId = rentalId
+            lastOperationWasToggle = true
             repository.toggleFavorite(token, rentalId)
                 .onSuccess { isFavorite ->
                     _favoriteState.value = FavoriteState.Success(isFavorite)
@@ -118,6 +129,8 @@ class RentalViewModel(
                 _events.value = RentalEvent.AuthError
                 return@launch
             }
+            lastCheckedRentalId = rentalId
+            lastOperationWasToggle = false
             repository.checkFavorite(token, rentalId)
                 .onSuccess { isFavorite ->
                     _favoriteState.value = FavoriteState.Success(isFavorite)
@@ -177,6 +190,27 @@ class RentalViewModel(
                     Log.e("RentalViewModel", "getRentalDetail error: ${exception.message}", exception)
                     _detailState.value = RentalDetailState.Error(exception.message ?: "获取房屋详情失败")
                 }
+        }
+    }
+
+    fun loadFavorites() {
+        viewModelScope.launch {
+            _rentalListState.value = RentalListState.Loading
+            val token = UserManager.getToken(context) ?: run {
+                _events.value = RentalEvent.AuthError
+                return@launch
+            }
+            try {
+                val result = repository.getFavorites(token)
+                result.onSuccess { rentals ->
+                    _favorites.value = rentals ?: emptyList()
+                    _rentalListState.value = RentalListState.Success(rentals ?: emptyList())
+                }.onFailure { error ->
+                    _rentalListState.value = RentalListState.Error(error.message ?: "加载收藏列表失败")
+                }
+            } catch (e: Exception) {
+                _rentalListState.value = RentalListState.Error(e.message ?: "加载收藏列表失败")
+            }
         }
     }
 } 
