@@ -121,4 +121,32 @@ class RentalViewModel(
     fun clearEvent() {
         _events.value = null
     }
+
+    fun searchRental(
+        query: String,
+        minPrice: Double? = null,
+        maxPrice: Double? = null,
+        minArea: Double? = null,
+        maxArea: Double? = null,
+        type: String? = null,
+        orientation: String? = null,
+        province: String? = null,
+        city: String? = null
+    ) {
+        viewModelScope.launch {
+            _rentalListState.value = RentalListState.Loading
+            repository.searchRental(
+                query, minPrice, maxPrice, minArea, maxArea,
+                type, orientation, province, city
+            )
+                .onSuccess { rentals ->
+                    Log.d("RentalViewModel", "searchRental success: ${rentals.size} results")
+                    _rentalListState.value = RentalListState.Success(rentals)
+                }
+                .onFailure { error ->
+                    Log.e("RentalViewModel", "searchRental error: ${error.message}")
+                    _rentalListState.value = RentalListState.Error(error.message ?: "搜索失败")
+                }
+        }
+    }
 } 

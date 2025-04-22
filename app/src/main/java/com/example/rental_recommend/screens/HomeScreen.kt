@@ -67,25 +67,30 @@ fun HomeScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadRentalList()
-    }
-
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf(HomeTab.PERSONALIZED) }
 
-    val filteredHouses = remember(searchQuery, rentalListState) {
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isBlank()) {
+            viewModel.loadRentalList()
+        } else {
+            viewModel.searchRental(
+                query = searchQuery.trim(),
+                minPrice = null,
+                maxPrice = null,
+                minArea = null,
+                maxArea = null,
+                type = null,
+                orientation = null,
+                province = null,
+                city = null
+            )
+        }
+    }
+
+    val filteredHouses = remember(rentalListState) {
         when (val state = rentalListState) {
-            is RentalListState.Success -> {
-                if (searchQuery.isBlank()) {
-                    state.rentals
-                } else {
-                    state.rentals.filter { 
-                        it.title.contains(searchQuery, ignoreCase = true) ||
-                        it.location.contains(searchQuery, ignoreCase = true)
-                    }
-                }
-            }
+            is RentalListState.Success -> state.rentals
             else -> emptyList()
         }
     }
@@ -113,19 +118,32 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // 搜索栏
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("搜索房源") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
+                placeholder = { 
+                    Text("搜索房源（地址、标题、标签等）") 
+                },
+                leadingIcon = { 
+                    Icon(
+                        Icons.Default.Search, 
+                        contentDescription = "搜索",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    ) 
+                },
+                singleLine = true,
+                shape = MaterialTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
 
-            // 标签页
             TabRow(
                 selectedTabIndex = selectedTab.ordinal,
                 modifier = Modifier.fillMaxWidth()
@@ -153,7 +171,11 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(text = state.message)
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
                 is RentalListState.Success -> {
@@ -162,14 +184,25 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "暂无房源",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = if (searchQuery.isBlank()) "暂无房源" else "未找到相关房源",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (searchQuery.isNotBlank()) {
+                                    Text(
+                                        text = "试试其他关键词",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
                     } else {
-                        Log.d("HomeScreen", "filteredHouses: ${filteredHouses.size}")
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(16.dp),
@@ -209,7 +242,6 @@ fun RentalItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column {
-            // 图片
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -241,7 +273,6 @@ fun RentalItem(
                     }
                 )
                 
-                // 收藏按钮
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier

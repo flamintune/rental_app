@@ -83,6 +83,32 @@ class RentalRepository(private val apiService: ApiService) {
         }
     }
 
+    suspend fun searchRental(
+        query: String,
+        minPrice: Double? = null,
+        maxPrice: Double? = null,
+        minArea: Double? = null,
+        maxArea: Double? = null,
+        type: String? = null,
+        orientation: String? = null,
+        province: String? = null,
+        city: String? = null
+    ): Result<List<RentalHouse>> {
+        return try {
+            val response = apiService.searchRental(
+                query, minPrice, maxPrice, minArea, maxArea,
+                type, orientation, province, city
+            )
+            if (response.isSuccessful && response.body() != null && response.body()!!.code == 200) {
+                Result.success(response.body()!!.data)
+            } else {
+                Result.failure(Exception(response.body()?.message ?: "搜索房源失败"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     private fun RentalDetailResponse.toRentalHouse(): RentalHouse {
         return RentalHouse(
             id = id,

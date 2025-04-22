@@ -71,7 +71,7 @@ fun MainNavigation(
         ) {
             composable("auth") {
                 AuthScreen(
-                    onNavigateToHome = { navController.popBackStack() }
+                    onNavigateToHome = { navController.navigate("home") }
                 )
             }
             composable("home") {

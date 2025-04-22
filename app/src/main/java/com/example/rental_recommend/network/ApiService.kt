@@ -61,6 +61,19 @@ interface ApiService {
         @Header("access-token") token: String,
         @Query("id") id: Int
     ): Response<FavoriteResponse>
+
+    @GET("rental/search/")
+    suspend fun searchRental(
+        @Query("query") query: String,
+        @Query("min_price") minPrice: Double? = null,
+        @Query("max_price") maxPrice: Double? = null,
+        @Query("min_area") minArea: Double? = null,
+        @Query("max_area") maxArea: Double? = null,
+        @Query("type") type: String? = null,
+        @Query("orientation") orientation: String? = null,
+        @Query("province") province: String? = null,
+        @Query("city") city: String? = null
+    ): Response<SearchResponse>
 }
 
 data class LoginRequest(
@@ -162,4 +175,10 @@ data class FavoriteResponse(
 
 data class FavoriteData(
     val isFavorite: Boolean
+)
+
+data class SearchResponse(
+    val code: Int,
+    val message: String,
+    val data: List<RentalHouse>
 ) 
