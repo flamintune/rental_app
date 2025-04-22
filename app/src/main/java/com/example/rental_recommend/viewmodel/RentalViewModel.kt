@@ -10,6 +10,7 @@ import com.example.rental_recommend.data.UserManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.asStateFlow
 
 sealed class RentalListState {
     object Loading : RentalListState()
@@ -27,6 +28,12 @@ sealed class RentalEvent {
     object AuthError : RentalEvent()
 }
 
+sealed class RentalDetailState {
+    object Loading : RentalDetailState()
+    data class Success(val rental: RentalHouse) : RentalDetailState()
+    data class Error(val message: String) : RentalDetailState()
+}
+
 class RentalViewModel(
     private val repository: RentalRepository,
     private val context: Context
@@ -42,6 +49,9 @@ class RentalViewModel(
 
     private var currentPage = 1
     private val pageSize = 10
+
+    private val _detailState = MutableStateFlow<RentalDetailState>(RentalDetailState.Loading)
+    val detailState: StateFlow<RentalDetailState> = _detailState.asStateFlow()
 
     fun loadRentalList() {
         viewModelScope.launch {
@@ -146,6 +156,26 @@ class RentalViewModel(
                 .onFailure { error ->
                     Log.e("RentalViewModel", "searchRental error: ${error.message}")
                     _rentalListState.value = RentalListState.Error(error.message ?: "搜索失败")
+                }
+        }
+    }
+
+    fun getRentalDetail(id: Int) {
+        viewModelScope.launch {
+            _detailState.value = RentalDetailState.Loading
+            val token = UserManager.getToken(context) ?: run {
+                _events.value = RentalEvent.AuthError
+                return@launch
+            }
+            Log.d("RentalViewModel", "getRentalDetail: 开始获取房源详情, id=$id")
+            repository.getRentalDetail(token, id)
+                .onSuccess { rental ->
+                    Log.d("RentalViewModel", "getRentalDetail success: ${rental}")
+                    _detailState.value = RentalDetailState.Success(rental)
+                }
+                .onFailure { exception ->
+                    Log.e("RentalViewModel", "getRentalDetail error: ${exception.message}", exception)
+                    _detailState.value = RentalDetailState.Error(exception.message ?: "获取房屋详情失败")
                 }
         }
     }

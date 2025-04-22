@@ -3,6 +3,7 @@ package com.example.rental_recommend.network
 import com.example.rental_recommend.model.RentalHouse
 import retrofit2.Response
 import retrofit2.http.*
+import com.google.gson.annotations.SerializedName
 
 interface ApiService {
     @POST("user/login")
@@ -35,6 +36,7 @@ interface ApiService {
 
     @GET("rental/detail/")
     suspend fun getRentalDetail(
+        @Header("access-token") token: String,
         @Query("id") id: Int
     ): Response<RentalDetailResponse>
 
@@ -148,19 +150,21 @@ data class RentalDetailResponse(
     val title: String,
     val url: String,
     val location: String,
+    @SerializedName("area_text")
     val areaText: String,
     val area: Double,
     val orientation: String,
     val structure: String,
+    @SerializedName("price_text")
     val priceText: String,
     val price: Double,
-    val tags: String,
+    val tags: String?,
     val level: String?,
     val floor: Int?,
     val province: String,
     val city: String,
-    val imgs: String,
-    val detail: String
+    val imgs: String?,
+    val detail: String?
 )
 
 data class FavoriteRequest(

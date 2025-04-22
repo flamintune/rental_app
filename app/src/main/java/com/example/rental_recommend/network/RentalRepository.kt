@@ -18,9 +18,9 @@ class RentalRepository(private val apiService: ApiService) {
         }
     }
 
-    suspend fun getRentalDetail(id: Int): Result<RentalHouse> {
+    suspend fun getRentalDetail(token: String, id: Int): Result<RentalHouse> {
         return try {
-            val response = apiService.getRentalDetail(id)
+            val response = apiService.getRentalDetail(token, id)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!.toRentalHouse())
             } else {
@@ -123,13 +123,13 @@ class RentalRepository(private val apiService: ApiService) {
             structure = structure,
             priceText = priceText,
             price = price,
-            tags = tags,
+            tags = tags ?: "",
             level = level,
             floor = floor,
             province = province,
             city = city,
-            imgs = imgs,
-        detail = detail
+            imgs = imgs ?: "",
+            detail = detail ?: ""
         )
     }
 } 
